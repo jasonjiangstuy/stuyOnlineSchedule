@@ -1,0 +1,281 @@
+<html><!--   Mods for flashing and warning color change and passing color change, and separate day and time views
+    Mar. 28, 2020
+    P. Brooks, Stuyvesant High School
+--><head>
+<title>Schedule</title>
+<style type="text/css">
+.auto-style1 {
+background-color: #CCFFFF;
+}
+</style>
+</head>
+<body onload="Init()">
+<script language="javascript">
+// *************************************** Period data filled in here *******************
+var ForcedStartTime=0;
+
+var ServerStartTime=85861;
+var period = Array(13);
+period[0]="Before school|0|28800";
+period[1]="Period 1|28800|31200";
+period[2]="Period 2|31500|33900";
+period[3]="Period 3|34140|36540";
+period[4]="Homeroom|36780|37500";
+period[5]="Period 4|37800|40200";
+period[6]="Period 5|40440|42840";
+period[7]="Period 6|43080|45480";
+period[8]="Period 7|45720|48120";
+period[9]="Period 8|48360|50760";
+period[10]="Period 9|51000|53400";
+period[11]="Period 10|53700|56100";
+period[12]="After school|56100|86399";
+
+</script>
+
+<script language="javascript">
+// **************************************** Main **********************************
+var ClientStartTime=0;
+var PeriodNames;
+var PeriodStarts;
+var PeriodEnds;
+
+var State = 'period';  // States are: 'period', 'warning' and 'passing'
+var WarningTime = 300; // 5 minutes warning
+
+function Init()
+{
+if (ForcedStartTime != 0)
+    ServerStartTime = ForcedStartTime;
+ClientStartTime = ClientSeconds();
+PeriodNames = new Array();
+PeriodStarts = new Array();
+PeriodEnds = new Array();
+
+for (var i = 0; i < period.length; ++i)
+{	a=period[i].split('|');
+    PeriodNames[i] = a[0];
+    PeriodStarts[i] = a[1];
+    PeriodEnds[i] = a[2];
+}
+setInterval('Tick()',1000);
+DivVisible("time");
+//Tick();
+}
+function Tick()
+{	
+document.all['seconds'].innerHTML = DisplaySeconds();
+document.all['hours_minutes'].innerHTML = DisplayHoursMinutes();
+changePeriods();
+//setTimeout('Tick()',1000);
+}
+
+function ClientSeconds()
+{	var d = new Date();
+return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();	
+}
+function SecondsNow()
+{	var secs = ServerStartTime + ClientSeconds() - ClientStartTime;
+if (secs >= 24*3600)
+    secs = secs - 24*3600;
+return secs;
+}
+function DisplaySeconds()
+{	var secs = SecondsNow() % 60;
+if (secs < 10)
+    return ':0'+secs;
+else
+    return ':'+secs;
+}
+function DisplayHoursMinutes()
+{	var mins = Math.floor(SecondsNow()/60)%60;
+var hours = Math.floor(SecondsNow()/3600);
+if (hours==0)
+    hours = 12;
+if (hours > 12)
+    hours = hours - 12;
+if (mins < 10)
+    return hours+':0'+mins;
+else
+    return hours+':'+mins;
+}
+function changePeriods()
+{	var pcolors = new Array(period.length);
+var snow = SecondsNow();
+var periodname = '';
+var minutes_into = 0;
+var minutes_left = 0;
+var i;
+var periodid;
+var minutes_left_id = document.getElementById("minutes_left");
+
+for (i = 0; i < period.length; ++i)
+    pcolors[i] = 'black';
+
+for (i = 0; i < period.length; ++i)
+{	if (snow >= PeriodStarts[i] && snow <= PeriodEnds[i])
+    {	// inside a period
+        periodname = PeriodNames[i];
+        minutes_into = Math.floor((snow-PeriodStarts[i])/60);
+        minutes_left = Math.floor((PeriodEnds[i]-PeriodStarts[i])/60) - minutes_into;
+        if (snow > (PeriodEnds[i] - WarningTime)) {
+            // inside a warning
+            if (State != 'warning') {
+                // just starting a warning
+                State = "warning";
+                minutes_left_id.style.color = cl_dark_brown;
+                flash_start("minutes_left",10,6,cl_white,cl_red);
+            }
+        }
+        else {
+            State = "period";
+            minutes_left_id.style.color = cl_red;
+        }
+        pcolors[i] = 'red';
+        break;
+    }
+    else if (i > 0)
+    {	// passing
+        if (snow > PeriodEnds[i-1] && snow < PeriodStarts[i])
+        {	periodname='Before ' + PeriodNames[i];
+            pcolors[i-1] = 'red';
+            pcolors[i] = 'red';
+            minutes_into = Math.floor((snow-PeriodEnds[i-1])/60);
+            minutes_left = Math.floor((PeriodStarts[i]-PeriodEnds[i-1])/60) - minutes_into;
+            minutes_left_id.style.color = cl_blue;
+            break;
+        }
+    }
+}
+
+if (document.all['PeriodName'].innerHTML != periodname)
+    document.all['PeriodName'].innerHTML = periodname;
+if (document.all['minutes_into'].innerHTML != minutes_into)
+{	document.all['minutes_into'].innerHTML = minutes_into;
+    document.all['minutes_left'].innerHTML = minutes_left;
+}
+
+for (i = 0; i < period.length; ++i)
+{	periodid='period'+i;
+    if (document.all[periodid].style.color != pcolors[i])
+        document.all[periodid].style.color = pcolors[i];
+}
+}
+</script>
+<script language="javascript">
+// ***************************************** Flashing code ***************************************
+// Colors:
+var cl_red = "red";
+var cl_green = "green";
+var cl_blue = "blue";
+var cl_dark_brown = "#daa520";
+var cl_light_brown = "#ac7e0d";
+var cl_black = "black";
+var cl_white = "white";
+
+// Flash code: given ID of element, number of seconds to flash, times/sec, first color and last color
+var fl_doc, fl_curr_color, fl_color1, fl_color2, fl_ticks_left, fl_timer = -1;
+function flash_start(docid,nsecs,persec,color1,color2) {
+var t;
+fl_curr_color = color1;
+fl_color1 = color1;
+fl_color2 = color2;
+t = nsecs * persec;
+if (t%2 == 0)
+    fl_ticks_left = t-1;
+else
+    fl_ticks_left = t;
+fl_doc = document.getElementById(docid);
+fl_doc.style.color = fl_curr_color;
+fl_timer = setInterval(flash_continue,Math.floor(1000/persec));
+}
+
+function flash_continue() {
+if (fl_curr_color == fl_color1)
+    fl_curr_color = fl_color2;
+else
+    fl_curr_color = fl_color1;
+fl_doc.style.color = fl_curr_color;
+fl_ticks_left -= 1;
+if (fl_ticks_left <= 0)
+    clearInterval(fl_timer);
+}
+
+
+</script>
+<script language="javascript">
+function DivVisible(which) {
+var time_div = document.getElementById("div_time");
+var day_div = document.getElementById("div_day");
+
+if (which == "time") {
+    time_div.style.visibility = "visible";
+    day_div.style.visibility = "hidden";
+}
+else {
+    time_div.style.visibility = "hidden";
+    day_div.style.visibility = "visible";
+}
+}
+
+</script>
+<form method="get" action="schedules.py">
+
+<div id="div_day" style="position: absolute; top: 10px; left: 0px; right: 0px; margin-left: auto; margin-right: auto; visibility: hidden;" align="center">
+<center>
+<table border="1" cellspacing="3">
+<tbody><tr><td align="center" colspan="2"><b>Homeroom</b></td></tr>
+<tr>
+<td align="center"><input type="submit" value="Choice"></td>
+<td align="center"><input type="button" name="to_time" value="Time" onclick="DivVisible('time');"></td>
+</tr>
+<tr id="period0" style="color: black;"><td align="center">Before school</td><td>&nbsp;12:00a - 8:00a</td></tr>
+<tr id="period1" style="color: black;"><td align="center">Period 1</td><td>&nbsp;8:00a - 8:40a</td></tr>
+<tr id="period2" style="color: black;"><td align="center">Period 2</td><td>&nbsp;8:45a - 9:25a</td></tr>
+<tr id="period3" style="color: black;"><td align="center">Period 3</td><td>&nbsp;9:29a - 10:09a</td></tr>
+<tr id="period4" style="color: red;"><td align="center">Homeroom</td><td>&nbsp;10:13a - 10:25a</td></tr>
+<tr id="period5" style="color: red;"><td align="center">Period 4</td><td>&nbsp;10:30a - 11:10a</td></tr>
+<tr id="period6" style="color: black;"><td align="center">Period 5</td><td>&nbsp;11:14a - 11:54a</td></tr>
+<tr id="period7" style="color: black;"><td align="center">Period 6</td><td>&nbsp;11:58a - 12:38p</td></tr>
+<tr id="period8" style="color: black;"><td align="center">Period 7</td><td>&nbsp;12:42p - 1:22p</td></tr>
+<tr id="period9" style="color: black;"><td align="center">Period 8</td><td>&nbsp;1:26p - 2:06p</td></tr>
+<tr id="period10" style="color: black;"><td align="center">Period 9</td><td>&nbsp;2:10p - 2:50p</td></tr>
+<tr id="period11" style="color: black;"><td align="center">Period 10</td><td>&nbsp;2:55p - 3:35p</td></tr>
+<tr id="period12" style="color: black;"><td align="center">After school</td><td>&nbsp;3:35p - 11:59p</td></tr>
+
+</tbody></table>
+</center>
+</div>
+
+<div id="div_time" style="position: absolute; top: 10px; left: 0px; right: 0px; margin-left: auto; margin-right: auto; visibility: visible;" align="center">
+<center>
+<table cellspacing="3" cellpadding="10" border="1" class="auto-style1"> <!-- border="1"-->
+<tbody><tr>
+<td width="50%" align="center" colspan="2"> 
+<font face="Verdana" size="2"><b>Homeroom</b></font><br>
+  <font face="Verdana" color="blue"><b><label id="PeriodName">Before Period 4</label></b></font>
+</td>
+</tr>
+<tr>
+  <td width="50%" align="center"><font size="7" color="#008000" face="Verdana">&nbsp;<label id="minutes_into">4</label></font></td>
+  <td width="50%" align="center"><font size="7" color="#FF0000" face="Verdana">&nbsp;<label id="minutes_left" style="color: blue;">1</label></font></td>
+</tr>
+<tr>
+  <td width="50%" align="center" colspan="2">
+  <font face="Verdana" size="4"><b><label id="hours_minutes">10:29</label></b></font>
+        <font face="Verdana" size="2"><b><label id="seconds">:41</label></b></font>
+  </td>
+</tr>
+<tr>
+<td width="50%" align="center"><input type="submit" name="Choice" value="Choice">
+ </td>
+ <td width="50%" align="center"><input type="button" name="Day" value="Day" onclick="DivVisible('day');"></td>
+</tr></tbody></table>
+ 
+</center> 
+</div>
+</form>
+
+
+
+
+</body></html>
