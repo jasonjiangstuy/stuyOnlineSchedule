@@ -3,9 +3,14 @@ body{
     font-size: 20px;
 }
 p{
-
+    font-size: 150%;
 }
 
 table, td, tr{
     border: 1px solid black;
+}
+
+#nav, #schedule{
+    display: flex;
+    justify-content: center;
 }
