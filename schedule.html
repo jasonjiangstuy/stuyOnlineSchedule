@@ -12,9 +12,10 @@
   <body style="margin: 0;">
     <p>
        Stuy Online Learning Schedule 
+       <button id="testplay">Activate Alarms</button>
     </p>
 
-<table style="margin: auto;">
+<table id='dclock'style="margin: auto;">
 
     <tr>
         <td colspan="2" id="period"></td>
@@ -37,14 +38,77 @@
 
 </table>
 
+
+
 <div id='nav'>
     <button id='toggleSchedule'> Schedule</button>
-    <button>Options</button>
+    <button id='toggleOptions'>Options</button>
     <a href="home.html"><button>Choice</button></a>
 </div>
+
+<!-- schedule -->
 <div id="schedule">
 <table id='Schedule'>
 
 </table>
 </div>
+
+<!-- options -->
+<div id='options'>
+<table >
+    <tr>
+    <td colspan="2">Clock Options: NOTE: the schedule doesnt dismiss you, your teacher does</td>
+</tr>
+<tr>
+    <td>Warning Bell Sound:
+        <br> 
+        (5 min left of class)
+    </td>
+    <td>
+        <div id='center'>
+            <input id='inputWSound' type='file' accept=".mp3"/>
+            <audio id='PLAYinputWSound'>Play Sound</audio>
+        </div>
+    </td>
+</tr>
+<tr>
+    <td>End Bell Sound:
+        <br> 
+        (class ended; 10 min passing)
+    </td>
+    <td>
+        <div id='center'>
+            <input id="inputESound" type='file' accept=".mp3"/>
+            <audio id='PLAYinputESound'>Play Sound</audio>
+        </div>
+    </td>   
+</tr>
+<tr>
+    <td>Start Bell Sound:
+    </td>
+    <td>
+        <div id='center'>
+            <input id="inputSSound" type='file' accept=".mp3"/>
+            <audio id='PLAYinputSSound'>Play Sound</audio>
+        </div>
+    </td>   
+</tr>
+<tr>
+    <td>Type of Clock:</td>
+    <td>
+        <input type="radio" name="ClockType" value="1">Digital</input>
+        <input type="radio" name="ClockType" value="2">Analog</input>
+    </td>
+
+</tr>
+
+<tr>
+    <td>Class Names:</td>
+    <td><button>Edit</button></td>
+</tr>
+</table>
+
+    <button id='optionSave'>Save</button>
+</div>
+
 </body>

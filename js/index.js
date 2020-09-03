@@ -1,22 +1,153 @@
 $(function(){
-
-// close all tabs except the time
+    // close all tabs except the time
     $('#Schedule').hide();
+    $('#options').hide();
+// load urls from local storage
+warnSound = localStorage.getItem('Warning');
+endSound = localStorage.getItem('Ending');
+startSound = localStorage.getItem('Start');
+// sounds variables
+var warnLoad, endLoad, startLoad
+// console.log(warnLoad, endLoad, startLoad);
+$('#testplay').click(function (){
+    // load sound -> https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
+    warnLoad = new Audio(warnSound);
+    endLoad = new Audio(endSound);
+    // endLoad.play();
+    // console.log('continue');
+    startLoad = new Audio(startSound);
+})
+function allStorage() {
+
+    var archive = [],
+        keys = Object.keys(localStorage),
+        i = 0, key;
+
+    for (; key = keys[i]; i++) {
+        archive.push( key + '=' + localStorage.getItem(key));
+    }
+
+    return archive;
+}
+// alert(allStorage())
+function setSrc(test, targetEle){
+    if (test == 'undefined' || test == null){
+        $(targetEle).hide();
+    }
+    else{
+        // console.log(test);
+        $(targetEle).attr({'src': test, 'controls': true});
+        $(targetEle).show();
+    }
+}
+// set the src for the audio files ||
+// close the audio ele if there is no src for them
+setSrc(warnSound, '#PLAYinputWSound')
+setSrc(endSound, '#PLAYinputESound')
+setSrc(startSound, '#PLAYinputSSound')
+
+
 
 // event handlers for tabs
+    var current = 'clock';
 
-    $('#toggleSchedule').click(function (){
-        $('#Schedule').toggle();
+    function changeTo(past, change){
+        $('#' + past).hide()
+        if (past == change){
+            current = 'clock'
+        }
+        else{
+            $('#' + change).show();
+            current = change;
+        }
+    }
+    $('#toggleSchedule').click(function (){    
+        changeTo(current, 'Schedule');
+    })
+    $('#toggleOptions').click(function (){
+        changeTo(current, 'options');
     })
 
+// look at file object when selected
+$('#inputWSound').on('change',
+    function (evt){
+        loadFile(this, $(this).attr('id'));
+    }
+    );
+$('#inputESound').change(
+function (evt){
+    loadFile(this, $(this).attr('id'));
+}  
+);
+
+$('#inputSSound').change(
+    function (evt){
+        loadFile(this, $(this).attr('id'));
+    }  
+    );
 
 
+// function when file is selected
+function loadFile(obj, target){
+    // console.log(obj);
+    var file = obj.files[0];
+    var fr = new FileReader();
+    fr.onload = function (){
+        var tele = $(('#PLAY' + target))
 
+        console.log(tele);
+        // console.log(this.result);
+        tele.attr({'src': this.result, 'controls':'true'});
+        tele.show();
+        // tele.play();
+    }
+    fr.readAsDataURL(file);
+
+}
+
+// event for when save button is pressed
+$('#optionSave').click(
+    function (){
+        // save changed audio files to local storage
+        function testChange(org, myNew, target){
+            if (org == myNew){
+                return
+            }
+            else{
+                localStorage.setItem(target, myNew)
+            }
+
+        }
+        testChange(warnSound, $('#PLAYinputWSound').attr('src'), 'Warning')
+        testChange(endSound, $('#PLAYinputESound').attr('src'), 'Ending')
+        testChange(startSound, $('#PLAYinputSSound').attr('src'), 'Start')
+        // get all local storage key value pairs
+        function allStorage() {
+
+            var archive = [],
+                keys = Object.keys(localStorage),
+                i = 0, key;
+        
+            for (; key = keys[i]; i++) {
+                archive.push( key + '=' + localStorage.getItem(key));
+            }
+        
+            return archive;
+        }
+        alert(allStorage())
+
+        location.reload(true);
+    }
+)
     // prototype using client side js to determine client time
-    // issues 
-    // if client time is wrong, then their clock will be wrong
-    //  potential solutions -> later
-    //  ping a external server to service the time 
+    // issues :
+        // if client time is wrong, then their clock will be wrong
+            //  potential solutions:
+                //  ping a external server to service the time 
+
+        // quite slow to load
+            // potential solutions:
+                // check to see that requests are only being sent once
 
 
     startOfSchool = 9 * 3600
@@ -68,7 +199,7 @@ $(function(){
         }
         else if (endOfSchool < sec){
             // after school
-            return ['afterschool',sec - endOfSchool , endOfDay - sec];
+            return ['after school',sec - endOfSchool , endOfDay - sec];
         }
         else{
             let timeInSchool = (sec - startOfSchool);
@@ -81,26 +212,66 @@ $(function(){
         
     }
     // [2, 2970, 2430]
+
+    // make alarms only go off once
+    var warning = false;
+    var ending = false;
+    var start = false;
     function Tick(){
-        console.log('test');
+        // console.log('test');
         var d = new Date();
         let h = d.getHours()
         let m = d.getMinutes()
         let s = d.getSeconds()
         let periodInfo = PeriodLeft(ClientSeconds(h, m, s));
-        console.log(periodInfo);
+        // console.log(periodInfo);
         let thisPd = periodInfo[0];
         let thisPass = Math.floor(periodInfo[1] / 60);
         let thisLeft = Math.ceil(periodInfo[2] / 60);
         
-        if ((periodInfo[2] < (10 * 60)) && (typeof periodInfo[0] != 'string')) {
-            // if 10 mins left -> start warning countdown
+        if ((periodInfo[2] < (15 * 60)) && (typeof periodInfo[0] != 'string')) {
+            // if 15 mins left -> warning bell
             // and it is not before/after school
-                thisPd = "Before period " + (thisPd + 1).toString();
-                thisPass -= 40;
-                
-
-        }else{
+            //  -> start warning bell sound
+            ending = false;
+            start = false;
+            if (!warning){
+                warnLoad.play();
+                warning=true;
+            }
+            thisPd = thisPd.toString();
+            thisLeft -= 10;
+        }
+        else if ((periodInfo[2] < (10 * 60)) && (typeof periodInfo[0] != 'string')) {
+            // if >10 mins left -> end bell /start of passing
+            // and it is not before/after school
+            //  -> start endbell sound
+            warning = false;
+            start = false;
+            if (!ending){
+                endLoad.play();
+                ending = true;
+            }
+            thisPd = "Before period " + (thisPd + 1).toString();
+            thisPass -= 40;
+        }
+        else if ((periodInfo[1] < (2 * 60)) && (typeof periodInfo[0] != 'string')) {
+            // if >2 mins of class -> start bell /start of class
+            // and it is not before/after school
+            //  -> start start bell sound
+            warning = false;
+            ending = false;
+            if (!ending){
+                startLoad.play();
+                start = true;
+            }
+            thisPd = "Before period " + (thisPd + 1).toString();
+            thisPass -= 40;
+        }
+        else if(typeof periodInfo[0] == 'string'){
+            thisPd = thisPd.toString();
+        }
+        else{
             thisPd = thisPd.toString();
             thisLeft -= 10;
         }

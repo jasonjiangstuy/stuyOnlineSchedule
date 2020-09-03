@@ -8,9 +8,26 @@ p{
 
 table, td, tr{
     border: 1px solid black;
+    margin: auto;
 }
 
-#nav, #schedule{
+#nav, #schedule, #center{
     display: flex;
     justify-content: center;
 }
+
+div > input, div > audio{
+    margin: auto;
+}
+/* #options{
+
+    flex-direction: column;
+} */
+
+/* #options > div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+} */
