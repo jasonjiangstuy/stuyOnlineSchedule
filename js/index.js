@@ -1,7 +1,8 @@
 $(function(){
     // close all tabs except the time
     $('#Schedule').hide();
-    $('#options').hide();
+    $('#Options').hide();
+    $('#Planner').hide();
 // load urls from local storage
 warnSound = localStorage.getItem('Warning');
 endSound = localStorage.getItem('Ending');
@@ -13,8 +14,6 @@ $('#testplay').click(function (){
     // load sound -> https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
     warnLoad = new Audio(warnSound);
     endLoad = new Audio(endSound);
-    // endLoad.play();
-    // console.log('continue');
     startLoad = new Audio(startSound);
 })
 function allStorage() {
@@ -46,9 +45,7 @@ setSrc(warnSound, '#PLAYinputWSound')
 setSrc(endSound, '#PLAYinputESound')
 setSrc(startSound, '#PLAYinputSSound')
 
-
-
-// event handlers for tabs
+// event handlers for nav tabs
     var current = 'clock';
 
     function changeTo(past, change){
@@ -63,10 +60,14 @@ setSrc(startSound, '#PLAYinputSSound')
     }
     $('#toggleSchedule').click(function (){    
         changeTo(current, 'Schedule');
-    })
+    });
     $('#toggleOptions').click(function (){
-        changeTo(current, 'options');
+        changeTo(current, 'Options');
+    });
+    $('#togglePlanner').click(function (){
+        changeTo(current, 'Planner');
     })
+
 
 // look at file object when selected
 $('#inputWSound').on('change',
@@ -86,7 +87,17 @@ $('#inputSSound').change(
     }  
     );
 
+// save myNew to -> local storage:target if diffrent to orginal
+function testChange(org, myNew, target){
+    if (org == myNew){
+        return; 
+        // do nothing
+    }
+    else{
+        localStorage.setItem(target, myNew)
+    }
 
+}
 // function when file is selected
 function loadFile(obj, target){
     // console.log(obj);
@@ -94,7 +105,6 @@ function loadFile(obj, target){
     var fr = new FileReader();
     fr.onload = function (){
         var tele = $(('#PLAY' + target))
-
         console.log(tele);
         // console.log(this.result);
         tele.attr({'src': this.result, 'controls':'true'});
@@ -104,42 +114,117 @@ function loadFile(obj, target){
     fr.readAsDataURL(file);
 
 }
+// ------ Planner Event Handlers
 
-// event for when save button is pressed
-$('#optionSave').click(
+// set items from local storage // give blank template
+var plannerIndex = localStorage.getItem('planNum');
+console.log(plannerIndex);
+if (plannerIndex != null){
+    for(var x = 0; x <= plannerIndex; x++){
+        
+        let left = localStorage.getItem((x + 'left').toString())
+        let right = localStorage.getItem((x + 'right').toString())
+        console.log(left, right);
+        addPlanItem(left, right);
+    }
+}else{
+    addPlanItem();
+}
+// reset button is pressed 
+$('#plannerReset').click(
+    function (){
+        if (plannerIndex != null){
+            for(var x = 0; x <= plannerIndex; x++){
+                localStorage.removeItem((x + 'left').toString());
+                localStorage.removeItem((x + 'right').toString());
+            }
+
+        // 
+        localStorage.removeItem('planNum')
+
+      }
+      location.reload(true);
+    }
+);
+
+// save button is pressed
+$('#plannerSave').click(
+    function(){
+        let x = $('#toDoList').children('li').each(
+            function(index){
+                console.log('Index: ' + index + '; html:' + $(this).html());
+                let l = $(this).children('#myLeft').html().toString();
+                console.log(l);
+                testChange(
+                    localStorage.getItem((index + 'left').toString()),
+                    l,
+                    (index + 'left').toString()
+                    ) 
+                let r = $(this).children('#right').html().toString()
+                console.log(r);
+                testChange(
+                    localStorage.getItem((index + 'right').toString()),
+                    r,
+                    (index + 'right').toString()
+                    ) 
+            }
+        )
+        localStorage.setItem('planNum', x.length - 1);
+        alert(allStorage())
+        location.reload(true);
+
+        // for (var i = 0; i < x.length; i++){
+        //     console.log(x[i]);
+        //     console.log(x[i].html());
+        // }
+    }
+    
+
+);
+// add new planner item
+function addPlanItem(left='', right=''){
+    let LI =$('<li></li>');
+    LI.append(
+        $('<div></div>').attr(
+            {
+                class:'AutoGrow',
+                contenteditable:'true',
+                 id:'myLeft'
+                }
+                ).html(left)
+            );
+    LI.append(
+        $('<div></div>').attr(
+            {
+                class:'AutoGrow',
+                contenteditable:'true',
+                    id:'right'
+                }
+                ).html(right)
+            );
+    $('#toDoList').append(LI);
+        
+
+}
+// add new item is pressed
+$('#addNewItem').click(addPlanItem)
+
+// ------ Options Event Handlers
+// save button is pressed
+$('#optionSave').click( 
     function (){
         // save changed audio files to local storage
-        function testChange(org, myNew, target){
-            if (org == myNew){
-                return
-            }
-            else{
-                localStorage.setItem(target, myNew)
-            }
 
-        }
         testChange(warnSound, $('#PLAYinputWSound').attr('src'), 'Warning')
         testChange(endSound, $('#PLAYinputESound').attr('src'), 'Ending')
         testChange(startSound, $('#PLAYinputSSound').attr('src'), 'Start')
-        // get all local storage key value pairs
-        function allStorage() {
-
-            var archive = [],
-                keys = Object.keys(localStorage),
-                i = 0, key;
-        
-            for (; key = keys[i]; i++) {
-                archive.push( key + '=' + localStorage.getItem(key));
-            }
-        
-            return archive;
-        }
-        alert(allStorage())
+ 
+        alert('Saved Options')
 
         location.reload(true);
     }
 )
-    // prototype using client side js to determine client time
+    // using client side js to determine client time
     // issues :
         // if client time is wrong, then their clock will be wrong
             //  potential solutions:
@@ -228,45 +313,51 @@ $('#optionSave').click(
         let thisPd = periodInfo[0];
         let thisPass = Math.floor(periodInfo[1] / 60);
         let thisLeft = Math.ceil(periodInfo[2] / 60);
-        
-        if ((periodInfo[2] < (15 * 60)) && (typeof periodInfo[0] != 'string')) {
-            // if 15 mins left -> warning bell
+        if ((periodInfo[1] < (2 * 60)) && (typeof periodInfo[0] != 'string')) {
+            // if >2 mins of class -> start bell /start of class
             // and it is not before/after school
-            //  -> start warning bell sound
+            //  -> start start bell sound
+            warning = false;
             ending = false;
-            start = false;
-            if (!warning){
-                warnLoad.play();
-                warning=true;
+            if (!start   && startLoad){
+                endLoad.pause();
+                warnLoad.pause();
+                startLoad.play();
+                start = true;
             }
             thisPd = thisPd.toString();
             thisLeft -= 10;
         }
+        
         else if ((periodInfo[2] < (10 * 60)) && (typeof periodInfo[0] != 'string')) {
             // if >10 mins left -> end bell /start of passing
             // and it is not before/after school
             //  -> start endbell sound
             warning = false;
             start = false;
-            if (!ending){
+            if (!ending  && endLoad){
+                startLoad.pause();
+                warnLoad.pause();
                 endLoad.play();
                 ending = true;
             }
             thisPd = "Before period " + (thisPd + 1).toString();
             thisPass -= 40;
         }
-        else if ((periodInfo[1] < (2 * 60)) && (typeof periodInfo[0] != 'string')) {
-            // if >2 mins of class -> start bell /start of class
+        else if ((periodInfo[2] < (15 * 60)) && (typeof periodInfo[0] != 'string')) {
+            // if 15 mins left -> warning bell
             // and it is not before/after school
-            //  -> start start bell sound
-            warning = false;
+            //  -> start warning bell sound
             ending = false;
-            if (!ending){
-                startLoad.play();
-                start = true;
+            start = false;
+            if (!warning && warnLoad){
+                endLoad.pause();
+                startLoad.pause()
+                warnLoad.play();
+                warning=true;
             }
-            thisPd = "Before period " + (thisPd + 1).toString();
-            thisPass -= 40;
+            thisPd = thisPd.toString();
+            thisLeft -= 10;
         }
         else if(typeof periodInfo[0] == 'string'){
             thisPd = thisPd.toString();
